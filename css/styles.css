@@ -1,0 +1,21 @@
+.header img {
+    float: left;
+    width: 100px;
+    height: 100px;
+    display: inline;
+
+
+}
+
+.header h1 {
+     top: 18px;
+    left: 10px;
+    font-family: "Calibri";
+    font-size: 60px;
+}
+
+
+body{
+    background:#f1f9f9;
+
+}

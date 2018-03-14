@@ -1,77 +1,37 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: HeshanAnu
- * Date: 3/9/2018
- * Time: 12:56 PM
- */
 
-require_once("session.php");
-require_once("class.user.php");
 include("dbConnect.php");
-$auth_user = new USER();
 
 
-$user_id = $_SESSION['user_session'];
+//echo($fieldValue);
+$mobile_number = $_POST['mobileNum'];
+$uname=$_POST['user_name'];
+$messages = $_POST['messages'];
+$gsm_send_sms = new gsm_send_sms();
+$gsm_send_sms->debug = false;
+$gsm_send_sms->port = 'COM6';
+$gsm_send_sms->baud = 115200;
+$gsm_send_sms->init();
 
-$stmt = $auth_user->runQuery("SELECT * FROM users WHERE user_id=:user_id");
-$stmt->execute(array(":user_id" => $user_id));
+$status = $gsm_send_sms->send($mobile_number, $messages);
 
-$userRow = $stmt->fetch(PDO::FETCH_ASSOC);
-$uname = $userRow['user_name'];
+$gsm_send_sms->close();
 
-$totalNumOfSentMessages = 0;
-$successfullPhoneNumbers = [];
-$successfullRecievers = [];
+try {
 
- 
-foreach ($_POST['numbers'] as $fieldIndex => $fieldValue) {
-
-    $data = explode("-", $fieldValue);
-    $mobile_number = $data[0];
-    $messages = $_POST['messages'];
-
-    $gsm_send_sms = new gsm_send_sms();
-    $gsm_send_sms->debug = false;
-    $gsm_send_sms->port = 'COM6';
-    $gsm_send_sms->baud = 115200;
-    $gsm_send_sms->init();
-
-    $status = $gsm_send_sms->send($mobile_number, $messages);
-    if ($status) {
-        $totalNumOfSentMessages++;
-        array_push($successfullPhoneNumbers,$mobile_number);
-        array_push($successfullRecievers,$data[1]);
+    $stmt = $conn->prepare("INSERT INTO messagelog (user_name, message, sender) VALUES (?, ?, ?)");
+    $stmt->bind_param("sss", $username, $messsge, $mobile);
 
 
-    } else {
-        echo "<body bgcolor='lightgreen'>";
-        echo "<br>";
-        echo "<h3 align='center'>Message not sent to $mobile_number </h3>\n";
-        echo "</body>";
-    }
+    $username = $uname;
+    $messsge = $messages;
+    $mobile = $mobile_number;
 
 
-    $gsm_send_sms->close();
+    $stmt->execute();
 
-    try {
-
-        $stmt = $conn->prepare("INSERT INTO messagelog (user_name, message, sender) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $username, $messsge, $mobile);
-
-
-        $username = $uname;
-        $messsge = $messages;
-        $mobile = $mobile_number;
-
-
-        $stmt->execute();
-
-    } catch (PDOException $e) {
-        echo $e->getMessage();
-    }
-
-
+} catch (PDOException $e) {
+    echo $e->getMessage();
 }
 
 
@@ -94,6 +54,7 @@ class gsm_send_sms
         $this->debugmsg("Setting up port: \"{$this->port} @ \"{$this->baud}\" baud");
 
         exec("MODE {$this->port}: BAUD={$this->baud} PARITY=N DATA=8 STOP=1", $output, $retval);
+
         if ($retval != 0) {
             throw new Exception('Unable to setup COM port, check it is correct');
         }
@@ -246,42 +207,3 @@ class gsm_send_sms
 
     }
 }
-
-?>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/font-awesome.min.css">
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/jquery.min.js"></script>
-
-    <title>SMS Gateway UOK</title>
-</head>
-<body style="background:#f1f9f9;">
-<h2> Total of <?php echo $totalNumOfSentMessages ?> messages were sent</h2><br>
-<table class="table">
-    <tr>
-        <th>Name</th>
-        <th>Number</th>
-
-    </tr>
-
-<?php
-$iteration=count($successfullRecievers);
-for($i=0;$i<$iteration;$i++){
-    echo "<tr>";
-
-    echo "<td>";
-    echo $successfullRecievers[$i];
-    echo "</td>";
-    echo "<td>";
-    echo $successfullPhoneNumbers[$i];
-    echo "</td>";
-    echo "</tr>";
-
-}
-?>
-</table>
-</body>
-</html>
